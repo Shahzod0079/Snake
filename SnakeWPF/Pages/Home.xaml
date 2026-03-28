@@ -10,13 +10,13 @@
 
     <Grid>
         <Grid.Background>
-            <ImageBrush ImageSource="C:\Users\student-a502.PERMAVIAT\source\repos\Snake\SnakeWPF\Image\background.jpg"/>
+            <ImageBrush ImageSource="C:\Users\ЗС\Source\Repos\Snake\SnakeWPF\Image\background.jpg"/>
         </Grid.Background>
     
     <Grid>
         <Grid Width="320" Height="200" HorizontalAlignment="Center" VerticalAlignment="Center">
             <Grid.Background>
-                    <ImageBrush ImageSource="C:\Users\student-a502.PERMAVIAT\source\repos\Snake\SnakeWPF\Image\background_3.jpg"/>
+                    <ImageBrush ImageSource="C:\Users\ЗС\Source\Repos\Snake\SnakeWPF\Image\background_3.jpg"/>
             </Grid.Background>
 
                 <Label
@@ -48,7 +48,7 @@
                          Height="25"
                          Margin="42,62,0,0"
                          TextWrapping="Wrap"
-                         Text="192.168.0.107"
+                         Text="127.0.0.1"
                          VerticalAlignment="Top"
                          Width="155"
                          VerticalContentAlignment="Center"
@@ -59,7 +59,7 @@
                          Height="25"
                          Margin="202,62,0,0"
                          TextWrapping="Wrap"
-                         Text="5000"
+                         Text="5001"
                          VerticalAlignment="Top"
                          Width="74"
                          VerticalContentAlignment="Center"

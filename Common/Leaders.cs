@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Common
+﻿namespace Common
 {
     public class Leaders
     {
-        public string Name { get; set; }
-
-        public string Points { get; set; }
+        public int Id { get; set; }
+        public string Name { get; set; }  // ← должно быть string, а не int
+        public int Points { get; set; }
     }
 }

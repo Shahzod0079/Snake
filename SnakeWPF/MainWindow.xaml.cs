@@ -1,42 +1,29 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using Newtonsoft.Json;
 using Common;
 
 namespace SnakeWPF
 {
-    /// <summary>
-    /// Логика взаимодействия для MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
         public static MainWindow mainWindow;
         public ViewModelUserSettings viewModelUserSettings = new ViewModelUserSettings();
         public ViewModelGames ViewModelGames = null;
-        public static IPAddress remoteIPADress = IPAddress.Parse("127.0.0.1");
+        public static IPAddress remoteIPAddress = IPAddress.Parse("127.0.0.1");
         public static int remotePort = 5001;
         public Thread tRec;
         public UdpClient receivingUdpClient;
         public Pages.Home Home = new Pages.Home();
         public Pages.Game Game = new Pages.Game();
-
+        private object returndata;
 
         public MainWindow()
         {
@@ -50,54 +37,59 @@ namespace SnakeWPF
             tRec = new Thread(new ThreadStart(Receiver));
             tRec.Start();
         }
-        public void OpenPage()
+
+        public void OpenPage(Page page)
         {
-            DoubleAnimation startAnimation = new DoubleAnimation();
-            startAnimation.From = 1;
-            startAnimation.To = 0;
-            startAnimation.Duration = TimeSpan.FromSeconds(0.6);
-            startAnimation.Completed += delegate
+            Dispatcher.Invoke(() =>
             {
-                Frame.Navigate(PageOpen);
-                DoubleAnimation endAnimation = new DoubleAnimation();
-                endAnimation.From = 0;
-                endAnimation.To = 1;
-                endAnimation.Duration = TimeSpan.FromSeconds(0.6);
-                frame.BeginAnimation(OpacityProperty, endAnimation);
-            };
-            frame.BeginAnimation(OpacityProperty, startAnimation);
+                Debug.WriteLine($"Получены данные: {returndata}");
+                DoubleAnimation startAnimation = new DoubleAnimation();
+                startAnimation.From = 1;
+                startAnimation.To = 0;
+                startAnimation.Duration = TimeSpan.FromSeconds(0.6);
+                startAnimation.Completed += delegate
+                {
+                    frame.Navigate(page);
+                    DoubleAnimation endAnimation = new DoubleAnimation();
+                    endAnimation.From = 0;
+                    endAnimation.To = 1;
+                    endAnimation.Duration = TimeSpan.FromSeconds(0.6);
+                    frame.BeginAnimation(UIElement.OpacityProperty, endAnimation);
+                };
+                frame.BeginAnimation(UIElement.OpacityProperty, startAnimation);
+            });
         }
+
         public void Receiver()
         {
-            receivingUdpClient = new UdpClient(int.Parse(ViewModelUserSettings.Port);
-            IPEndPoint RemoteIpEndPoint = null;
-
             try
             {
+                receivingUdpClient = new UdpClient(int.Parse(viewModelUserSettings.Port));
+                IPEndPoint RemoteIpEndPoint = null;
+
                 while (true)
                 {
-                    byte[] receiveBytes = receivingUdpClient.Receive(
-                        ref RemoteIpEndPoint,);
-
+                    byte[] receiveBytes = receivingUdpClient.Receive(ref RemoteIpEndPoint);
                     string returndata = Encoding.UTF8.GetString(receiveBytes);
+
                     if (returndata != null)
                     {
-                        Dispatcher.Invoke(() =>
-                        OpenPage(Game);
-                    });
-                }
-                ViewModelGames = JsonConvert.DeserializeObject<ViewModelGames>(returndata.ToString());
-                if (ViewModelGames.SnakesPlayers.GameOver)
-                {
-                    Dispatcher.Invoke(() =>
-                    {
-                        OpenPage(new Pages.EndGame());
-                    });
+                        ViewModelGames = JsonConvert.DeserializeObject<ViewModelGames>(returndata);
 
-                }
-                else
-                {
-                    Game.CreateUI();
+                        Dispatcher.Invoke(() =>
+                        {
+                            if (ViewModelGames != null && ViewModelGames.SnakesPlayers != null && ViewModelGames.SnakesPlayers.GameOver)
+                            {
+                                OpenPage(new Pages.EndGame());
+                            }
+                            else if (ViewModelGames != null)
+                            {
+                                if (frame.Content != Game)
+                                    OpenPage(Game);
+                                Game.CreateUI();
+                            }
+                        });
+                    }
                 }
             }
             catch (Exception ex)
@@ -105,14 +97,15 @@ namespace SnakeWPF
                 Debug.WriteLine("Возникло исключение: " + ex.ToString() + "\n" + ex.Message);
             }
         }
-        public static void Send()
+
+        public static void Send(string datagram)
         {
             UdpClient sender = new UdpClient();
-            IPEndPoint endPoint = new IPEndPoint(remoteIPADress, remotePort);
+            IPEndPoint endPoint = new IPEndPoint(remoteIPAddress, remotePort);
             try
             {
-                Byte[] byres = Encoding.UTF8.GetBytes(datagram);
-                sender.Send(bytes, bytes.Length, endPoint)
+                byte[] bytes = Encoding.UTF8.GetBytes(datagram);
+                sender.Send(bytes, bytes.Length, endPoint);
             }
             catch (Exception ex)
             {
@@ -123,28 +116,28 @@ namespace SnakeWPF
                 sender.Close();
             }
         }
-        public void EvenKeyUp()
+
+        public void EventKeyUp(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            if (!string.IsNullOrEmpty(ViewModelUserSettings.IPAddress) && 
-                !string.IsNullOrEmpty(ViewModelUserSettings.Port) &&
-                (ViewModelGames != null && !ViewModelGames.SnakesPlayers.GameOver))
+            if (!string.IsNullOrEmpty(viewModelUserSettings.IPAddress) &&
+                !string.IsNullOrEmpty(viewModelUserSettings.Port) &&
+                (ViewModelGames != null && ViewModelGames.SnakesPlayers != null && !ViewModelGames.SnakesPlayers.GameOver))
             {
-                if (e.Key == Key.Up)
-                    Send($"Up|{JsonConvert.SerializeObject(ViewModelUserSettings)}");
-                else if (e.Key == Key.Down)
-                    Send($"Down|{JsonConvert.SerializeObject(ViewModelUserSettings)}");
-                if (e.Key == Key.Left)
-                    Send($"Left|{JsonConvert.SerializeObject(ViewModelUserSettings)}");
-                else if (e.Key == Key.Right)
-                    Send($"Right|{JsonConvert.SerializeObject(ViewModelUserSettings)}");
+                if (e.Key == System.Windows.Input.Key.Up)
+                    Send($"Up|{JsonConvert.SerializeObject(viewModelUserSettings)}");
+                else if (e.Key == System.Windows.Input.Key.Down)
+                    Send($"Down|{JsonConvert.SerializeObject(viewModelUserSettings)}");
+                else if (e.Key == System.Windows.Input.Key.Left)
+                    Send($"Left|{JsonConvert.SerializeObject(viewModelUserSettings)}");
+                else if (e.Key == System.Windows.Input.Key.Right)
+                    Send($"Right|{JsonConvert.SerializeObject(viewModelUserSettings)}");
             }
         }
+
         private void QuitApplication(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            receivingUdpClient.Close();
-            tRec.Abort();
+            receivingUdpClient?.Close();
+            tRec?.Abort();
         }
     }
 }
-    
-

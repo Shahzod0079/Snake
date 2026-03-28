@@ -1,38 +1,39 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace SnakeWPF.Pages
 {
-    /// <summary>
-    /// Логика взаимодействия для EndGame.xaml
-    /// </summary>
     public partial class EndGame : Page
     {
         public EndGame()
         {
             InitializeComponent();
-            name.Content = MainWindow.mainWindow.viewModelUserSettings.Name;
-            top.Content = MainWindow.mainWindow.ViewModelGames.Top;
-            glasses.Content = $"{MainWindow.mainWindow.ViewModelGames.SnakesPlayers.Points.Count - 3} glasses";
-            MainWindow.mainWindow.receivingUdpClient.Close();
-            MainWindow.mainWindow.tRec.Abort();
+
+            // Проверка на null
+            if (MainWindow.mainWindow.viewModelUserSettings != null)
+                name.Content = MainWindow.mainWindow.viewModelUserSettings.Name;
+
+            if (MainWindow.mainWindow.ViewModelGames?.SnakesPlayers?.Points != null)
+            {
+                top.Content = MainWindow.mainWindow.ViewModelGames.Top;
+                glasses.Content = $"{MainWindow.mainWindow.ViewModelGames.SnakesPlayers.Points.Count - 3} glasses";
+            }
+
+            // Закрываем соединения
+            try
+            {
+                MainWindow.mainWindow.receivingUdpClient?.Close();
+                MainWindow.mainWindow.tRec?.Abort();
+            }
+            catch { }
+
             MainWindow.mainWindow.ViewModelGames = null;
         }
+
         private void OpenHome(object sender, RoutedEventArgs e)
         {
-            MainWindow.mainWindow.OpenPage(MainWindow.mainWindow.Home);
+            // Переход на страницу Home
+            MainWindow.mainWindow.frame.Navigate(MainWindow.mainWindow.Home);
         }
     }
 }

@@ -1,18 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using Newtonsoft.Json;  
 
 namespace SnakeWPF.Pages
 {
@@ -28,33 +18,43 @@ namespace SnakeWPF.Pages
 
         private void StartGame(object sender, EventArgs e)
         {
+            // Проверка что receivingUdpClient не null
             if (MainWindow.mainWindow.receivingUdpClient != null)
             {
                 MainWindow.mainWindow.receivingUdpClient.Close();
+
                 if (MainWindow.mainWindow.tRec != null)
                 {
                     MainWindow.mainWindow.tRec.Abort();
-
-                    IPAddress UserIPAddress;
-                    if (!IPAddress.TryParse(ip.Text, out UserIPAddress))
-                    {
-                        MessageBox.Show("Please use the Ip address in the formst X.X.X.X ");
-                        return;
-                    }
-                    int UserPort;
-                    if (!int.TryParse(port.Text, out UserPort))
-                    {
-                        MessageBox.Show("Please use the port as a number.");
-                        return;
-                    }
-                    MainWindow.mainWindow.StartReceiver();
-                    MainWindow.mainWindow.viewModelUserSettings.IpAddress = ip.Text;
-                    MainWindow.mainWindow.viewModelUserSettings.Port = port.Text;
-                    MainWindow.mainWindow.viewModelUserSettings.Name = port.Name;
-                    MainWindow.Send("/start|" + JsonConvert.SerializeObject(MainWindow.mainWindow.viewModelUserSettings));
-
                 }
             }
+
+            // Проверка IP адреса
+            IPAddress UserIPAddress;
+            if (!IPAddress.TryParse(ip.Text, out UserIPAddress))
+            {
+                MessageBox.Show("Please use the Ip address in the format X.X.X.X");
+                return;
+            }
+
+            // Проверка порта
+            int UserPort;
+            if (!int.TryParse(port.Text, out UserPort))
+            {
+                MessageBox.Show("Please use the port as a number.");
+                return;
+            }
+
+            // Запуск получения данных
+            MainWindow.mainWindow.StartReceiver();
+
+            // Сохраняем настройки пользователя
+            MainWindow.mainWindow.viewModelUserSettings.IPAddress = ip.Text;
+            MainWindow.mainWindow.viewModelUserSettings.Port = port.Text;
+            MainWindow.mainWindow.viewModelUserSettings.Name = name.Text;  // ← исправлено: было port.Name
+
+            // Отправляем данные на сервер
+            MainWindow.Send("/start|" + JsonConvert.SerializeObject(MainWindow.mainWindow.viewModelUserSettings));
         }
     }
 }
