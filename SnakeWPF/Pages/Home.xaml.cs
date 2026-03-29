@@ -2,7 +2,7 @@
 using System.Net;
 using System.Windows;
 using System.Windows.Controls;
-using Newtonsoft.Json;  
+using Newtonsoft.Json;
 
 namespace SnakeWPF.Pages
 {
@@ -18,15 +18,20 @@ namespace SnakeWPF.Pages
 
         private void StartGame(object sender, EventArgs e)
         {
-            // Проверка что receivingUdpClient не null
+            // Сбрасываем старые данные перед новой игрой
+            MainWindow.mainWindow.ViewModelGames = null;
+
+            // Очищаем старые соединения
             if (MainWindow.mainWindow.receivingUdpClient != null)
             {
-                MainWindow.mainWindow.receivingUdpClient.Close();
+                try { MainWindow.mainWindow.receivingUdpClient.Close(); } catch { }
+                MainWindow.mainWindow.receivingUdpClient = null;
+            }
 
-                if (MainWindow.mainWindow.tRec != null)
-                {
-                    MainWindow.mainWindow.tRec.Abort();
-                }
+            if (MainWindow.mainWindow.tRec != null)
+            {
+                try { MainWindow.mainWindow.tRec.Abort(); } catch { }
+                MainWindow.mainWindow.tRec = null;
             }
 
             // Проверка IP адреса
@@ -45,16 +50,19 @@ namespace SnakeWPF.Pages
                 return;
             }
 
-            // Запуск получения данных
-            MainWindow.mainWindow.StartReceiver();
-
             // Сохраняем настройки пользователя
             MainWindow.mainWindow.viewModelUserSettings.IPAddress = ip.Text;
             MainWindow.mainWindow.viewModelUserSettings.Port = port.Text;
-            MainWindow.mainWindow.viewModelUserSettings.Name = name.Text;  // ← исправлено: было port.Name
+            MainWindow.mainWindow.viewModelUserSettings.Name = name.Text;
+
+            // Запуск получения данных
+            MainWindow.mainWindow.StartReceiver();
 
             // Отправляем данные на сервер
             MainWindow.Send("/start|" + JsonConvert.SerializeObject(MainWindow.mainWindow.viewModelUserSettings));
+
+            // Переход на страницу Game
+            MainWindow.mainWindow.OpenPage(MainWindow.mainWindow.Game);
         }
     }
 }

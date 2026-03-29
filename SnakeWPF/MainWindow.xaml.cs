@@ -34,6 +34,13 @@ namespace SnakeWPF
 
         public void StartReceiver()
         {
+            // Останавливаем старый поток если есть
+            if (tRec != null && tRec.IsAlive)
+            {
+                try { tRec.Abort(); } catch { }
+                tRec = null;
+            }
+
             tRec = new Thread(new ThreadStart(Receiver));
             tRec.Start();
         }

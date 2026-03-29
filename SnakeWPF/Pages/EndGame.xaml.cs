@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using Common;
 
 namespace SnakeWPF.Pages
 {
@@ -9,7 +10,6 @@ namespace SnakeWPF.Pages
         {
             InitializeComponent();
 
-            // Проверка на null
             if (MainWindow.mainWindow.viewModelUserSettings != null)
                 name.Content = MainWindow.mainWindow.viewModelUserSettings.Name;
 
@@ -27,13 +27,20 @@ namespace SnakeWPF.Pages
             }
             catch { }
 
+            // Сбрасываем данные игры
             MainWindow.mainWindow.ViewModelGames = null;
         }
 
         private void OpenHome(object sender, RoutedEventArgs e)
         {
-            // Переход на страницу Home
-            MainWindow.mainWindow.frame.Navigate(MainWindow.mainWindow.Home);
+            // Очищаем старые данные перед новой игрой
+            MainWindow.mainWindow.ViewModelGames = null;
+
+            // Создаем новую страницу Home
+            MainWindow.mainWindow.Home = new Home();
+
+            // Переходим на Home
+            MainWindow.mainWindow.OpenPage(MainWindow.mainWindow.Home);
         }
     }
 }
