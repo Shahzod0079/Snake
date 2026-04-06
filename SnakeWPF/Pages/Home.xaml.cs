@@ -18,21 +18,26 @@ namespace SnakeWPF.Pages
 
         private void StartGame(object sender, EventArgs e)
         {
-            // Сбрасываем старые данные перед новой игрой
+            // Сбрасываем старые данные
             MainWindow.mainWindow.ViewModelGames = null;
 
-            // Очищаем старые соединения
-            if (MainWindow.mainWindow.receivingUdpClient != null)
+            // Закрываем старый сокет и останавливаем поток (ВАЖНО!)
+            try
             {
-                try { MainWindow.mainWindow.receivingUdpClient.Close(); } catch { }
+                MainWindow.mainWindow.receivingUdpClient?.Close();
                 MainWindow.mainWindow.receivingUdpClient = null;
             }
+            catch { }
 
-            if (MainWindow.mainWindow.tRec != null)
+            try
             {
-                try { MainWindow.mainWindow.tRec.Abort(); } catch { }
+                MainWindow.mainWindow.tRec?.Abort();
                 MainWindow.mainWindow.tRec = null;
             }
+            catch { }
+
+            // Небольшая задержка, чтобы порт освободился
+            System.Threading.Thread.Sleep(100);
 
             // Проверка IP адреса
             IPAddress UserIPAddress;

@@ -19,27 +19,16 @@ namespace SnakeWPF.Pages
                 glasses.Content = $"{MainWindow.mainWindow.ViewModelGames.SnakesPlayers.Points.Count - 3} glasses";
             }
 
-            // Закрываем соединения
-            try
-            {
-                MainWindow.mainWindow.receivingUdpClient?.Close();
-                MainWindow.mainWindow.tRec?.Abort();
-            }
-            catch { }
-
-            // Сбрасываем данные игры
+            // НЕ закрываем сокет и не прерываем поток здесь!
+            // Просто сбрасываем данные игры
             MainWindow.mainWindow.ViewModelGames = null;
         }
 
         private void OpenHome(object sender, RoutedEventArgs e)
         {
-            // Очищаем старые данные перед новой игрой
+            // Не закрываем сокет здесь! Это сделает StartGame при новом запуске
             MainWindow.mainWindow.ViewModelGames = null;
-
-            // Создаем новую страницу Home
             MainWindow.mainWindow.Home = new Home();
-
-            // Переходим на Home
             MainWindow.mainWindow.OpenPage(MainWindow.mainWindow.Home);
         }
     }

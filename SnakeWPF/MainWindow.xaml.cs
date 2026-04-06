@@ -23,7 +23,6 @@ namespace SnakeWPF
         public UdpClient receivingUdpClient;
         public Pages.Home Home = new Pages.Home();
         public Pages.Game Game = new Pages.Game();
-        private object returndata;
 
         public MainWindow()
         {
@@ -32,113 +31,107 @@ namespace SnakeWPF
             OpenPage(Home);
         }
 
-        public void StartReceiver()
-        {
-            // Останавливаем старый поток если есть
-            if (tRec != null && tRec.IsAlive)
-            {
-                try { tRec.Abort(); } catch { }
-                tRec = null;
-            }
-
-            tRec = new Thread(new ThreadStart(Receiver));
-            tRec.Start();
-        }
-
         public void OpenPage(Page page)
         {
             Dispatcher.Invoke(() =>
             {
-                Debug.WriteLine($"Получены данные: {returndata}");
-                DoubleAnimation startAnimation = new DoubleAnimation();
-                startAnimation.From = 1;
-                startAnimation.To = 0;
-                startAnimation.Duration = TimeSpan.FromSeconds(0.6);
-                startAnimation.Completed += delegate
+                var anim = new DoubleAnimation(1, 0, TimeSpan.FromSeconds(0.6));
+                anim.Completed += (s, _) =>
                 {
                     frame.Navigate(page);
-                    DoubleAnimation endAnimation = new DoubleAnimation();
-                    endAnimation.From = 0;
-                    endAnimation.To = 1;
-                    endAnimation.Duration = TimeSpan.FromSeconds(0.6);
-                    frame.BeginAnimation(UIElement.OpacityProperty, endAnimation);
+                    frame.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromSeconds(0.6)));
                 };
-                frame.BeginAnimation(UIElement.OpacityProperty, startAnimation);
+                frame.BeginAnimation(UIElement.OpacityProperty, anim);
             });
         }
 
+        public void StartReceiver()
+        {
+            // Закрываем старый сокет, если есть
+            try
+            {
+                receivingUdpClient?.Close();
+                receivingUdpClient = null;
+            }
+            catch { }
+
+            // Останавливаем старый поток, если есть
+            try
+            {
+                tRec?.Abort();
+                tRec = null;
+            }
+            catch { }
+
+            // Создаём новый поток
+            tRec = new Thread(Receiver);
+            tRec.Start();
+        }
         public void Receiver()
         {
             try
             {
                 receivingUdpClient = new UdpClient(int.Parse(viewModelUserSettings.Port));
-                IPEndPoint RemoteIpEndPoint = null;
-
+                IPEndPoint remoteEndPoint = null;
                 while (true)
                 {
-                    byte[] receiveBytes = receivingUdpClient.Receive(ref RemoteIpEndPoint);
-                    string returndata = Encoding.UTF8.GetString(receiveBytes);
+                    byte[] bytes = receivingUdpClient.Receive(ref remoteEndPoint);
+                    string data = Encoding.UTF8.GetString(bytes);
+                    var vm = JsonConvert.DeserializeObject<ViewModelGames>(data);
+                    if (vm == null) continue;
 
-                    if (returndata != null)
+                    Dispatcher.Invoke(() =>
                     {
-                        ViewModelGames = JsonConvert.DeserializeObject<ViewModelGames>(returndata);
+                        // Если игра уже закончилась или мы на странице EndGame - игнорируем новые данные
+                        if (ViewModelGames?.SnakesPlayers?.GameOver == true || frame.Content is Pages.EndGame)
+                            return;
 
-                        Dispatcher.Invoke(() =>
+                        if (vm.SnakesPlayers?.GameOver == true)
                         {
-                            if (ViewModelGames != null && ViewModelGames.SnakesPlayers != null && ViewModelGames.SnakesPlayers.GameOver)
-                            {
-                                OpenPage(new Pages.EndGame());
-                            }
-                            else if (ViewModelGames != null)
-                            {
-                                if (frame.Content != Game)
-                                    OpenPage(Game);
-                                Game.CreateUI();
-                            }
-                        });
-                    }
+                            ViewModelGames = vm;
+                            OpenPage(new Pages.EndGame());
+                        }
+                        else
+                        {
+                            ViewModelGames = vm;
+                            if (frame.Content != Game) OpenPage(Game);
+                            Game.CreateUI();
+                        }
+                    });
                 }
             }
+            catch (ThreadAbortException) { }
             catch (Exception ex)
             {
-                Debug.WriteLine("Возникло исключение: " + ex.ToString() + "\n" + ex.Message);
+                Debug.WriteLine($"Receiver error: {ex.Message}");
             }
         }
 
         public static void Send(string datagram)
         {
-            UdpClient sender = new UdpClient();
-            IPEndPoint endPoint = new IPEndPoint(remoteIPAddress, remotePort);
-            try
+            using (var sender = new UdpClient())
             {
-                byte[] bytes = Encoding.UTF8.GetBytes(datagram);
-                sender.Send(bytes, bytes.Length, endPoint);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine("Возникло исключение: " + ex.ToString() + "\n" + ex.Message);
-            }
-            finally
-            {
-                sender.Close();
+                var endPoint = new IPEndPoint(remoteIPAddress, remotePort);
+                try
+                {
+                    byte[] bytes = Encoding.UTF8.GetBytes(datagram);
+                    sender.Send(bytes, bytes.Length, endPoint);
+                }
+                catch (Exception ex) { Debug.WriteLine(ex.Message); }
             }
         }
 
         public void EventKeyUp(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            if (!string.IsNullOrEmpty(viewModelUserSettings.IPAddress) &&
-                !string.IsNullOrEmpty(viewModelUserSettings.Port) &&
-                (ViewModelGames != null && ViewModelGames.SnakesPlayers != null && !ViewModelGames.SnakesPlayers.GameOver))
-            {
-                if (e.Key == System.Windows.Input.Key.Up)
-                    Send($"Up|{JsonConvert.SerializeObject(viewModelUserSettings)}");
-                else if (e.Key == System.Windows.Input.Key.Down)
-                    Send($"Down|{JsonConvert.SerializeObject(viewModelUserSettings)}");
-                else if (e.Key == System.Windows.Input.Key.Left)
-                    Send($"Left|{JsonConvert.SerializeObject(viewModelUserSettings)}");
-                else if (e.Key == System.Windows.Input.Key.Right)
-                    Send($"Right|{JsonConvert.SerializeObject(viewModelUserSettings)}");
-            }
+            if (string.IsNullOrEmpty(viewModelUserSettings.IPAddress) || string.IsNullOrEmpty(viewModelUserSettings.Port)) return;
+            if (ViewModelGames?.SnakesPlayers?.GameOver == true) return;
+
+            string cmd = null;
+            if (e.Key == System.Windows.Input.Key.Up) cmd = "Up";
+            else if (e.Key == System.Windows.Input.Key.Down) cmd = "Down";
+            else if (e.Key == System.Windows.Input.Key.Left) cmd = "Left";
+            else if (e.Key == System.Windows.Input.Key.Right) cmd = "Right";
+            if (cmd != null) Send($"{cmd}|{JsonConvert.SerializeObject(viewModelUserSettings)}");
         }
 
         private void QuitApplication(object sender, System.ComponentModel.CancelEventArgs e)
