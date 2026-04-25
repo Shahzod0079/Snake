@@ -23,27 +23,21 @@ namespace SnakeWPF.Pages
         {
             Dispatcher.Invoke(() =>
             {
-                // Смена кадра
                 Stepcadr = (Stepcadr == 0) ? 1 : 0;
 
-                // Очищаем canvas
                 canvas.Children.Clear();
 
-                // Проверка на null
                 var viewModel = MainWindow.mainWindow.ViewModelGames;
                 if (viewModel == null) return;
 
-                // ========== 1. ОТРИСОВКА СВОЕЙ ЗМЕИ (ЗЕЛЕНАЯ) ==========
                 if (viewModel.SnakesPlayers?.Points != null)
                 {
                     DrawSnake(viewModel.SnakesPlayers.Points, true);
                 }
 
-                // ========== 2. ОТРИСОВКА ДРУГИХ ЗМЕЙ (СИНИЕ) ==========
-                // Используем ToList() чтобы избежать ошибки "коллекция была изменена"
                 if (viewModel.AllSnakes != null)
                 {
-                    var snakesCopy = viewModel.AllSnakes.ToList(); // ← создаем копию
+                    var snakesCopy = viewModel.AllSnakes.ToList();
                     foreach (var otherSnake in snakesCopy)
                     {
                         if (otherSnake?.Points != null && otherSnake.Points.Count > 0)
@@ -53,7 +47,6 @@ namespace SnakeWPF.Pages
                     }
                 }
 
-                // ========== 3. ОТРИСОВКА ЯБЛОКА ==========
                 if (viewModel.Points != null)
                 {
                     try
@@ -91,19 +84,18 @@ namespace SnakeWPF.Pages
 
         private void DrawSnake(System.Collections.Generic.List<Snakes.Point> points, bool isMainPlayer)
         {
-            // Создаем копию точек, чтобы избежать ошибки
             var pointsCopy = points.ToList();
 
             for (int iPoint = pointsCopy.Count - 1; iPoint >= 0; iPoint--)
             {
                 var SnakePoint = pointsCopy[iPoint];
 
-                // Анимация для не головы
+                // анимация для не головы
                 if (iPoint != 0 && pointsCopy.Count > iPoint)
                 {
                     var NextSnakePoint = pointsCopy[iPoint - 1];
 
-                    // Горизонтальное движение
+                    // горизонтальное движение
                     if (SnakePoint.X > NextSnakePoint.X || SnakePoint.X < NextSnakePoint.X)
                     {
                         if (iPoint % 2 == 0)
@@ -121,7 +113,7 @@ namespace SnakeWPF.Pages
                                 SnakePoint.Y -= 1;
                         }
                     }
-                    // Вертикальное движение
+                    // вертикальное движение
                     else if (SnakePoint.Y > NextSnakePoint.Y || SnakePoint.Y < NextSnakePoint.Y)
                     {
                         if (iPoint % 2 == 0)
@@ -141,11 +133,10 @@ namespace SnakeWPF.Pages
                     }
                 }
 
-                // Цвет для точки
+                // цвет для точки
                 Brush color;
                 if (isMainPlayer)
                 {
-                    // Своя змея - зеленая
                     if (iPoint == 0)
                         color = new SolidColorBrush(Color.FromArgb(255, 0, 127, 14));
                     else
@@ -153,7 +144,6 @@ namespace SnakeWPF.Pages
                 }
                 else
                 {
-                    // Чужие змеи - синие (НЕ ДВИГАЮТСЯ, только отображаются)
                     if (iPoint == 0)
                         color = new SolidColorBrush(Color.FromArgb(255, 14, 76, 127));
                     else

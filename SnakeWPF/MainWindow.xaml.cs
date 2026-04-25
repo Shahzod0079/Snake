@@ -23,6 +23,7 @@ namespace SnakeWPF
         public UdpClient receivingUdpClient;
         public Pages.Home Home = new Pages.Home();
         public Pages.Game Game = new Pages.Game();
+        private bool isGameOver = false;
 
         public MainWindow()
         {
@@ -31,10 +32,37 @@ namespace SnakeWPF
             OpenPage(Home);
         }
 
+        // сброс перед новой игрой
+        public void ResetForNewGame()
+        {
+            isGameOver = false;
+            ViewModelGames = null;
+
+            try
+            {
+                receivingUdpClient?.Close();
+                receivingUdpClient = null;
+            }
+            catch { }
+
+            try
+            {
+                tRec?.Abort();
+                tRec = null;
+            }
+            catch { }
+        }
+
         public void OpenPage(Page page)
         {
             Dispatcher.Invoke(() =>
             {
+                // при открытии Home сбрасываем игру
+                if (page is Pages.Home)
+                {
+                    ResetForNewGame();
+                }
+
                 var anim = new DoubleAnimation(1, 0, TimeSpan.FromSeconds(0.6));
                 anim.Completed += (s, _) =>
                 {
@@ -47,7 +75,6 @@ namespace SnakeWPF
 
         public void StartReceiver()
         {
-            // Закрываем старый сокет, если есть
             try
             {
                 receivingUdpClient?.Close();
@@ -55,7 +82,6 @@ namespace SnakeWPF
             }
             catch { }
 
-            // Останавливаем старый поток, если есть
             try
             {
                 tRec?.Abort();
@@ -63,10 +89,10 @@ namespace SnakeWPF
             }
             catch { }
 
-            // Создаём новый поток
             tRec = new Thread(Receiver);
             tRec.Start();
         }
+
         public void Receiver()
         {
             try
@@ -82,12 +108,11 @@ namespace SnakeWPF
 
                     Dispatcher.Invoke(() =>
                     {
-                        // Если игра уже закончилась или мы на странице EndGame - игнорируем новые данные
-                        if (ViewModelGames?.SnakesPlayers?.GameOver == true || frame.Content is Pages.EndGame)
-                            return;
+                        if (isGameOver) return;
 
                         if (vm.SnakesPlayers?.GameOver == true)
                         {
+                            isGameOver = true;
                             ViewModelGames = vm;
                             OpenPage(new Pages.EndGame());
                         }
@@ -101,10 +126,13 @@ namespace SnakeWPF
                 }
             }
             catch (ThreadAbortException) { }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Receiver error: {ex.Message}");
-            }
+            catch (Exception ex) { Debug.WriteLine($"Receiver error: {ex.Message}"); }
+        }
+
+        private void QuitApplication(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            receivingUdpClient?.Close();
+            tRec?.Abort();
         }
 
         public static void Send(string datagram)
@@ -132,12 +160,6 @@ namespace SnakeWPF
             else if (e.Key == System.Windows.Input.Key.Left) cmd = "Left";
             else if (e.Key == System.Windows.Input.Key.Right) cmd = "Right";
             if (cmd != null) Send($"{cmd}|{JsonConvert.SerializeObject(viewModelUserSettings)}");
-        }
-
-        private void QuitApplication(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            receivingUdpClient?.Close();
-            tRec?.Abort();
         }
     }
 }

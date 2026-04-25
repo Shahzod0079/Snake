@@ -85,19 +85,32 @@ namespace Snake
                         {
                             var user = JsonConvert.DeserializeObject<ViewModelUserSettings>(parts[1]);
 
-                            // Найти старого игрока с таким же IP и портом
-                            var oldPlayer = remoteIPAddress.FirstOrDefault(x => x.IPAddress == user.IPAddress && x.Port == user.Port);
-                            if (oldPlayer != null)
+                            // поиск старого игрока по Ip и порту
+                            int existingIndex = remoteIPAddress.FindIndex(x => x.IPAddress == user.IPAddress && x.Port == user.Port);
+
+                            if (existingIndex != -1)
                             {
-                                // Удалить старого игрока из списков
-                                remoteIPAddress.RemoveAll(x => x.IPAddress == user.IPAddress && x.Port == user.Port);
-                                viewModelGames.RemoveAll(x => x.IdSnake == oldPlayer.IdSnake);
-                                Console.WriteLine($"Удалён старый игрок {oldPlayer.IPAddress}:{oldPlayer.Port} с IdSnake={oldPlayer.IdSnake}");
+                                int oldIdSnake = remoteIPAddress[existingIndex].IdSnake;
+                                Console.WriteLine($"Найден старый игрок: IdSnake={oldIdSnake}, удаляем...");
+
+                                // Удаляем из обоих списков
+                                remoteIPAddress.RemoveAt(existingIndex);
+                                viewModelGames.RemoveAll(x => x.IdSnake == oldIdSnake);
+                            }
+                            else
+                            {
+                                Console.WriteLine("Старый игрок не найден, создаём нового...");
                             }
 
-                            // Создать нового игрока
+                            // создаем новго игрока
                             user.IdSnake = AddSnake();
-                            viewModelGames[user.IdSnake].IdSnake = user.IdSnake;
+
+                            if (user.IdSnake >= 0 && user.IdSnake < viewModelGames.Count)
+                            {
+                                viewModelGames[user.IdSnake].IdSnake = user.IdSnake;
+                                viewModelGames[user.IdSnake].SnakesPlayers.GameOver = false;
+                            }
+
                             remoteIPAddress.Add(user);
                             Console.WriteLine($"Подключился новый игрок {user.IPAddress}:{user.Port} -> IdSnake={user.IdSnake}");
                         }
@@ -109,6 +122,7 @@ namespace Snake
                         {
                             var user = JsonConvert.DeserializeObject<ViewModelUserSettings>(parts[1]);
                             int idx = remoteIPAddress.FindIndex(x => x.IPAddress == user.IPAddress && x.Port == user.Port);
+
                             if (idx >= 0 && idx < viewModelGames.Count && viewModelGames[idx].SnakesPlayers != null && !viewModelGames[idx].SnakesPlayers.GameOver)
                             {
                                 var dir = viewModelGames[idx].SnakesPlayers.direction;
@@ -207,7 +221,7 @@ namespace Snake
                         SaveLeaders();
                     }
 
-                    // Если игра окончена – сохраняем рекорд и НЕ удаляем игрока (чтобы клиент получил GameOver)
+                    // Если игра окончена – сохраняем рекорд и не удаляем игрока 
                     if (snake.GameOver)
                     {
                         LoadLeaders();

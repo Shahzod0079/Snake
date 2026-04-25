@@ -19,14 +19,12 @@ namespace SnakeWPF.Pages
                 glasses.Content = $"{MainWindow.mainWindow.ViewModelGames.SnakesPlayers.Points.Count - 3} glasses";
             }
 
-            // НЕ закрываем сокет и не прерываем поток здесь!
-            // Просто сбрасываем данные игры
             MainWindow.mainWindow.ViewModelGames = null;
         }
 
         private void OpenHome(object sender, RoutedEventArgs e)
         {
-            // Не закрываем сокет здесь! Это сделает StartGame при новом запуске
+            MainWindow.mainWindow.ResetForNewGame();
             MainWindow.mainWindow.ViewModelGames = null;
             MainWindow.mainWindow.Home = new Home();
             MainWindow.mainWindow.OpenPage(MainWindow.mainWindow.Home);
